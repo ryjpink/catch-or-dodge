@@ -4,6 +4,7 @@ project(catcher)
 
 add_executable(catcher
     main.cpp
+    player.cpp
 )
 
 target_compile_features(catcher PRIVATE cxx_std_20)
