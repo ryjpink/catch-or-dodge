@@ -1,3 +1,4 @@
+#include "ball.h"
 #include "player.h"
 
 #include <SFML/Graphics.hpp>
@@ -9,14 +10,22 @@
 
 #include <box2d/box2d.h>
 
+#include <random>
+#include <vector>
+
 // Defines the size of the game stage (playable area).
 float stageAspectRatio = 16 / 9.0;
 float stageWidth = 20;                             // m
 float stageHeight = stageWidth / stageAspectRatio; // m
 
+float ballSpawnInterval = 5; // s
+
 // Options controlling the accuracy of the physics simulation
 const int32 velocityIterations = 8;
 const int32 positionIterations = 3;
+
+const unsigned seed = std::random_device()();
+std::mt19937 randomNumberGenerator(seed);
 
 void UpdateViewport(sf::RenderWindow &window)
 {
@@ -39,6 +48,12 @@ void UpdateViewport(sf::RenderWindow &window)
     view.setSize(viewportWidth, -viewportHeight);
     view.setCenter(0, (stageHeight - viewportHeight) / 2 + viewportHeight / 2);
     window.setView(view);
+}
+
+b2Vec2 GenerateRandomSpawnPosition()
+{
+    std::uniform_real_distribution<float> xDistribution(-0.5 * stageWidth, 0.5 * stageWidth);
+    return b2Vec2(xDistribution(randomNumberGenerator), stageHeight);
 }
 
 int main()
@@ -66,6 +81,9 @@ int main()
 
     // Set up the camera.
     UpdateViewport(window);
+
+    float timeUntilNextBall = 0;
+    std::vector<Ball> balls;
 
     sf::Clock clock;
     while (window.isOpen())
@@ -109,6 +127,17 @@ int main()
         float timeStep = clock.getElapsedTime().asSeconds();
         clock.restart();
 
+        timeUntilNextBall -= timeStep;
+        while (timeUntilNextBall < 0)
+        {
+            timeUntilNextBall += ballSpawnInterval;
+
+            // Spawn a new ball
+            Ball ball(world);
+            ball.SetPosition(GenerateRandomSpawnPosition());
+            balls.push_back(std::move(ball));
+        }
+
         // Update the game.
         player.Update();
         world.Step(timeStep, velocityIterations, positionIterations);
@@ -117,6 +146,10 @@ int main()
         window.clear(sf::Color::Black);
         window.draw(stage);
         player.Draw(window);
+        for (Ball &ball : balls)
+        {
+            ball.Draw(window);
+        }
         window.display();
     }
 }

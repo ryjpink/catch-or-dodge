@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.22)
 project(catcher)
 
 add_executable(catcher
+    ball.cpp
     main.cpp
     player.cpp
 )
