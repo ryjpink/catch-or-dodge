@@ -1,10 +1,11 @@
 #pragma once // Ensure this file only gets included once
 
+#include "entity.h"
+
 #include <SFML/Graphics/RectangleShape.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
 #include <box2d/b2_world.h>
 
-class Player
+class Player : public Entity
 {
   public:
     // Constructor
@@ -17,6 +18,8 @@ class Player
 
   private:
     float GetHorizontalVelocity();
+
+    float _speed = 5; // m/s
 
     b2Body *_body;
     bool _movingLeft;

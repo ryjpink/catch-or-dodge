@@ -6,11 +6,12 @@
 #include <box2d/b2_fixture.h>
 #include <box2d/b2_polygon_shape.h>
 
-Player::Player(b2World &world) // (definition)
+Player::Player(b2World &world) : Entity(Type::Player)
 {
     b2BodyDef bodyDef;
     bodyDef.type = b2_kinematicBody;
     bodyDef.position.Set(0, 0);
+    bodyDef.userData.pointer = (uintptr_t)(Entity*)this;
     _body = world.CreateBody(&bodyDef);
 
     float height = 1.8;            // m
@@ -48,11 +49,11 @@ float Player::GetHorizontalVelocity()
     float velocity = 0;
     if (_movingRight)
     {
-        velocity += 1;
+        velocity += _speed;
     }
     if (_movingLeft)
     {
-        velocity -= 1;
+        velocity -= _speed;
     }
     return velocity;
 }
@@ -60,7 +61,7 @@ float Player::GetHorizontalVelocity()
 void Player::Draw(sf::RenderWindow &window)
 {
     b2Vec2 p = _body->GetPosition();
-    _rectangle.setPosition(sf::Vector2f(p.x, p.y));
+    _rectangle.setPosition(p.x, p.y);
     window.draw(_rectangle);
 }
 

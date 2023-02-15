@@ -14,10 +14,11 @@ const float ballRadius = 0.11;
 //  Density = Mass / Volume = 0.42 / 0.0380132711 = 11.0487729113
 const float ballDensity = 11.0487729113;
 
-Ball::Ball(b2World &world)
+Ball::Ball(b2World &world) : Entity(Type::Ball)
 {
     b2BodyDef bodyDef;
     bodyDef.type = b2_dynamicBody;
+    bodyDef.userData.pointer = (uintptr_t)(Entity*)this;
     _body = world.CreateBody(&bodyDef);
 
     b2CircleShape shape;

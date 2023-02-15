@@ -1,11 +1,13 @@
 #pragma once
 
+#include "entity.h"
+
 #include <SFML/Graphics/CircleShape.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 
 #include <box2d/b2_world.h>
 
-class Ball
+class Ball : public Entity
 {
   public:
     Ball(b2World& world);
