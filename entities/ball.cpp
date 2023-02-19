@@ -1,4 +1,4 @@
-#include "ball.h"
+#include "entities/ball.h"
 
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <box2d/b2_body.h>

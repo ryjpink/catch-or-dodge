@@ -2,7 +2,8 @@
 
 #include "entity.h"
 
-#include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/Texture.hpp>
+#include <SFML/Graphics/Sprite.hpp>
 #include <box2d/b2_world.h>
 
 class Player : public Entity
@@ -11,6 +12,7 @@ class Player : public Entity
     // Constructor
     Player(b2World &world); // (declaration)
 
+    void SetPosition(b2Vec2 position);
     void SetMovingLeft(bool movingLeft);
     void SetMovingRight(bool movingRight);
     void Draw(sf::RenderWindow &window);
@@ -24,5 +26,6 @@ class Player : public Entity
     b2Body *_body;
     bool _movingLeft;
     bool _movingRight;
-    sf::RectangleShape _rectangle;
+    sf::Texture _texture;
+    sf::Sprite _sprite;
 };
