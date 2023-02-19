@@ -24,7 +24,7 @@ class Entity
 
 
     virtual void Draw(sf::RenderWindow &window) {}
-    virtual void Update() {}
+    virtual void Update(float timeStep) {}
     void Destroy() { _isDestroyed = true; }
     bool IsDestroyed() { return _isDestroyed; }
 

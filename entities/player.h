@@ -1,6 +1,7 @@
 #pragma once // Ensure this file only gets included once
 
 #include "entity.h"
+#include "life_bar.h"
 
 #include <SFML/Graphics/Texture.hpp>
 #include <SFML/Graphics/Sprite.hpp>
@@ -15,8 +16,11 @@ class Player : public Entity
     void SetPosition(b2Vec2 position);
     void SetMovingLeft(bool movingLeft);
     void SetMovingRight(bool movingRight);
+    void AddHealth(float amount);
+    float GetHealthRatio();
+    bool IsDead();
     void Draw(sf::RenderWindow &window);
-    void Update();
+    void Update(float timeStep);
 
   private:
     float GetHorizontalVelocity();
@@ -28,4 +32,7 @@ class Player : public Entity
     bool _movingRight = false;
     sf::Texture _texture;
     sf::Sprite _sprite;
+    sf::Vector2f _baseScale;
+    LifeBar _lifeBar;
+    float _timeSinceDeath = 0;
 };

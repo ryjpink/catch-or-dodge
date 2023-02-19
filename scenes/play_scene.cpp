@@ -6,6 +6,7 @@
 #include "entity.h"
 #include "life_bar.h"
 #include "scenes/game_over_scene.h"
+#include "text.h"
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Drawable.hpp>
@@ -35,16 +36,6 @@ const int32 positionIterations = 3;
 
 const unsigned seed = std::random_device()();
 
-void DrawInWindowView(sf::RenderWindow &window, sf::Drawable &drawable)
-{
-    sf::Vector2u windowSize = window.getSize();
-    sf::View windowView(sf::FloatRect(0, 0, windowSize.x, windowSize.y));
-    sf::View previousView = window.getView();
-    window.setView(windowView);
-    window.draw(drawable);
-    window.setView(previousView);
-}
-
 class PlayScene : public Scene, b2ContactListener
 {
   public:
@@ -65,30 +56,50 @@ class PlayScene : public Scene, b2ContactListener
 
     void Update(float timeStep) override
     {
-        _lifeBar.Add(-lifeLostPerSecond * timeStep);
-        if (_lifeBar.IsDead())
+        _player->AddHealth(-lifeLostPerSecond * timeStep);
+        if (_player->IsDead())
         {
-            _game.SetScene(CreateGameOverScene(_game));
-            return;
-        }
+            if (!_gameOver)
+            {
+                _gameOver = true;
+                _timeUntilGameOverScreen = 2;
+                for (const std::shared_ptr<Entity> &entity : entities)
+                {
+                    Entity::Type type = entity->GetType();
+                    if (type == Entity::Type::Ball || type == Entity::Type::Bomb)
+                    {
+                        entity->Destroy();
+                    }
+                }
+            }
 
-        timeUntilNextBall -= timeStep;
-        timeUntilNextBomb -= timeStep;
-        while (timeUntilNextBall < 0)
-        {
-            SpawnBall();
-            timeUntilNextBall += ballSpawnInterval;
+            _timeUntilGameOverScreen -= timeStep;
+            if (_timeUntilGameOverScreen <= 0)
+            {
+                _game.SetScene(CreateGameOverScene(_game));
+                return;
+            }
         }
-
-        while (timeUntilNextBomb < 0)
+        else
         {
-            SpawnBomb();
-            timeUntilNextBomb += bombSpawnInterval;
+            _timeUntilNextBall -= timeStep;
+            _timeUntilNextBomb -= timeStep;
+            while (_timeUntilNextBall < 0)
+            {
+                SpawnBall();
+                _timeUntilNextBall += ballSpawnInterval;
+            }
+
+            while (_timeUntilNextBomb < 0)
+            {
+                SpawnBomb();
+                _timeUntilNextBomb += bombSpawnInterval;
+            }
         }
 
         for (const std::shared_ptr<Entity> &entity : entities)
         {
-            entity->Update();
+            entity->Update(timeStep);
         }
 
         _world.Step(timeStep, velocityIterations, positionIterations);
@@ -113,7 +124,7 @@ class PlayScene : public Scene, b2ContactListener
         sf::RectangleShape lifeBarShape;
         float lifeBarHeight = 0.01f * stageBounds.height;
         lifeBarShape.setPosition(stageBounds.left, stageBounds.top);
-        lifeBarShape.setSize(sf::Vector2f(stageBounds.width * _lifeBar.GetRatio(), lifeBarHeight));
+        lifeBarShape.setSize(sf::Vector2f(stageBounds.width * _player->GetHealthRatio(), lifeBarHeight));
         lifeBarShape.setFillColor(sf::Color::Red);
         window.draw(lifeBarShape);
 
@@ -127,12 +138,9 @@ class PlayScene : public Scene, b2ContactListener
         scoreText.setString(scoreString);
         scoreText.setFillColor(sf::Color::Black);
         scoreText.setCharacterSize(32);
-        sf::FloatRect textBoundsInStage = _stage.WindowToStage(scoreText.getLocalBounds());
-        sf::Vector2f textPositionInStage(stageBounds.left + 0.99 * stageBounds.width - textBoundsInStage.width,
-                                         stageBounds.top + 0.02 * stageBounds.height);
-        sf::Vector2f textPositionInWindow = _stage.StageToWindow(textPositionInStage);
-        scoreText.setPosition(textPositionInWindow);
-        DrawInWindowView(window, scoreText);
+        sf::FloatRect textBoundsInStage(stageBounds.left, stageBounds.top + 0.02 * stageBounds.height,
+                                        stageBounds.width * 0.99, stageBounds.height);
+        DrawText(window, _stage, scoreText, textBoundsInStage, TextAlignment::Right);
     }
 
     void OnKeyPressed(sf::Event::KeyEvent &event) override
@@ -144,6 +152,10 @@ class PlayScene : public Scene, b2ContactListener
         if (event.code == sf::Keyboard::Right)
         {
             _player->SetMovingRight(true);
+        }
+        if (event.code == sf::Keyboard::K) // Cheat code: Kill player
+        {
+            _player->AddHealth(-1000);
         }
     }
 
@@ -218,14 +230,14 @@ class PlayScene : public Scene, b2ContactListener
         {
             Player *player = (Player *)entityA;
             Ball *ball = (Ball *)entityB;
-            _lifeBar.Add(20);
+            _player->AddHealth(20);
             ball->Destroy();
         }
         if (entityA->GetType() == Entity::Type::Player && entityB->GetType() == Entity::Type::Bomb)
         {
             Player *player = (Player *)entityA;
             Bomb *bomb = (Bomb *)entityB;
-            _lifeBar.Add(-20);
+            _player->AddHealth(-20);
             bomb->Destroy();
         }
     }
@@ -249,13 +261,14 @@ class PlayScene : public Scene, b2ContactListener
 
     std::shared_ptr<Player> _player;
 
-    LifeBar _lifeBar;
+    float _timeUntilNextBall = 0;
 
-    float timeUntilNextBall = 0;
-
-    float timeUntilNextBomb = 2;
+    float _timeUntilNextBomb = 2;
 
     sf::Clock _scoreTimer;
+
+    bool _gameOver = false;
+    float _timeUntilGameOverScreen;
 };
 
 std::unique_ptr<Scene> CreatePlayScene(Game &game)

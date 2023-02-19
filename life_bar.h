@@ -27,11 +27,6 @@ class LifeBar
         return value / maxValue;
     }
 
-    bool IsDead()
-    {
-        return value == 0;
-    }
-
   private:
     float maxValue = 100;
     float value = maxValue;
