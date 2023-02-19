@@ -24,8 +24,8 @@ class Player : public Entity
     float _speed = 5; // m/s
 
     b2Body *_body;
-    bool _movingLeft;
-    bool _movingRight;
+    bool _movingLeft = false;
+    bool _movingRight = false;
     sf::Texture _texture;
     sf::Sprite _sprite;
 };
