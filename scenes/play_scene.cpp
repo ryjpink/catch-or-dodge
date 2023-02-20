@@ -225,9 +225,12 @@ class PlayScene : public Scene, b2ContactListener
     // Called when two fixtures begin to touch.
     void BeginContact(b2Contact *contact) override
     {
+        b2Fixture *fixtureA = contact->GetFixtureA();
+        b2Fixture *fixtureB = contact->GetFixtureB();
+
         // Get the two bodies involved in the collision
-        b2Body *bodyA = contact->GetFixtureA()->GetBody();
-        b2Body *bodyB = contact->GetFixtureB()->GetBody();
+        b2Body *bodyA = fixtureA->GetBody();
+        b2Body *bodyB = fixtureB->GetBody();
 
         // Get the entities that the bodies represent
         Entity *entityA = (Entity *)bodyA->GetUserData().pointer;
@@ -238,6 +241,8 @@ class PlayScene : public Scene, b2ContactListener
         }
         if (entityA->GetType() > entityB->GetType())
         {
+            std::swap(fixtureA, fixtureB);
+            std::swap(bodyA, bodyB);
             std::swap(entityA, entityB);
         }
 
@@ -245,15 +250,21 @@ class PlayScene : public Scene, b2ContactListener
         {
             Player *player = (Player *)entityA;
             Ball *ball = (Ball *)entityB;
-            _player->AddHealth(20);
-            ball->Destroy();
+            if (player->GetActiveHandFixture() == fixtureA)
+            {
+                _player->AddHealth(20);
+                ball->Destroy();
+            }
         }
         if (entityA->GetType() == Entity::Type::Player && entityB->GetType() == Entity::Type::Bomb)
         {
             Player *player = (Player *)entityA;
             Bomb *bomb = (Bomb *)entityB;
-            _player->AddHealth(-20);
-            bomb->Destroy();
+            if (player->GetActiveHandFixture() == fixtureA)
+            {
+                _player->AddHealth(-20);
+                bomb->Destroy();
+            }
         }
     }
 

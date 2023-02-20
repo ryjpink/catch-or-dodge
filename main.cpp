@@ -14,7 +14,7 @@ using namespace std::chrono_literals;
 
 int main()
 {
-    auto stage = Stage::FromWidthAndAspectRatio(15, 16.0 / 9.0);
+    auto stage = Stage::FromWidthAndAspectRatio(10, 16.0 / 9.0);
 
     auto game = Game(stage);
     game.SetScene(CreateMenuScene(game));
