@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/Transform.hpp>
 #include <SFML/System/Vector2.hpp>
 
 class Stage
@@ -19,6 +20,8 @@ class Stage
     // the stage's aspect ratio.
     void FitToWindow(sf::RenderWindow &window);
 
+    sf::Transform WindowToStage();
+    sf::Transform StageToWindow();
     sf::Vector2f WindowToStage(sf::Vector2f windowPoint);
     sf::Vector2f StageToWindow(sf::Vector2f stagePoint);
     sf::FloatRect WindowToStage(sf::FloatRect windowRect);

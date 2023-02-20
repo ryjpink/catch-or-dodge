@@ -5,4 +5,4 @@
 
 #include <memory>
 
-std::unique_ptr<Scene> CreateGameOverScene(Game& game);
+std::unique_ptr<Scene> CreateGameOverScene(Game& game, int scoreInSeconds);

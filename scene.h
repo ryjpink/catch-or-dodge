@@ -18,4 +18,7 @@ class Scene
     virtual void OnKeyReleased(sf::Event::KeyEvent &event)
     {
     }
+    virtual void OnTextEntered(sf::Event::TextEvent &event)
+    {
+    }
 };

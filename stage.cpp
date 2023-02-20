@@ -31,7 +31,7 @@ float Stage::GetAspectRatio()
 
 void Stage::FitToWindow(sf::RenderWindow &window)
 {
-    sf::Vector2u windowSize = window.getSize();
+    sf::Vector2u windowSize = window.getSize(); // px
 
     float windowAspectRatio = windowSize.x / float(windowSize.y);
     float viewportWidth = _bounds.width;
@@ -55,6 +55,16 @@ void Stage::FitToWindow(sf::RenderWindow &window)
     _windowToStage.translate(-0.5 * viewportWidth, -0.5 * viewportHeight);
     _windowToStage.scale(viewportWidth / windowSize.x, viewportHeight / windowSize.y);
     _stageToWindow = _windowToStage.getInverse();
+}
+
+sf::Transform Stage::WindowToStage()
+{
+    return _windowToStage;
+}
+
+sf::Transform Stage::StageToWindow()
+{
+    return _stageToWindow;
 }
 
 sf::Vector2f Stage::WindowToStage(sf::Vector2f windowPoint)

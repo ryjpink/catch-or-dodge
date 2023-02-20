@@ -3,6 +3,7 @@
 #include "scene.h"
 #include "stage.h"
 
+#include <SFML/Window/Event.hpp>
 #include <memory>
 
 class Game
@@ -53,6 +54,13 @@ class Game
         if (_currentScene)
         {
             _currentScene->OnKeyReleased(event);
+        }
+    }
+    void OnTextEntered(sf::Event::TextEvent &event)
+    {
+        if (_currentScene)
+        {
+            _currentScene->OnTextEntered(event);
         }
     }
 

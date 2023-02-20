@@ -51,6 +51,10 @@ int main()
             {
                 game.OnKeyReleased(event.key);
             }
+            if (event.type == sf::Event::TextEntered)
+            {
+                game.OnTextEntered(event.text);
+            }
         }
 
         float timeStep = clock.getElapsedTime().asSeconds();

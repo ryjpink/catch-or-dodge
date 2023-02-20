@@ -2,3 +2,6 @@ out
 compile_commands.json
 .cache
 .vscode
+venv
+.DS_Store
+__pycache__

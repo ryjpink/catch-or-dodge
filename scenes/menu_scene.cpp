@@ -1,8 +1,9 @@
 #include "menu_scene.h"
 
+#include "leaderboard.h"
 #include "scenes/leaderboard_scene.h"
 #include "scenes/play_scene.h"
-#include "text.h"
+#include "ui/text.h"
 
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/Rect.hpp>
@@ -51,13 +52,12 @@ class MenuScene : public Scene
         window.draw(_background);
 
         float menuHeight = 0;
-        float lineSpacing = 1.25;
-        sf::FloatRect labelBounds[MenuEntry::Count];
+        sf::Vector2f labelSizes[MenuEntry::Count];
         for (int i = 0; i < MenuEntry::Count; ++i)
         {
             sf::Text &label = _labels[i];
-            labelBounds[i] = MeasureText(_stage, label);
-            menuHeight += labelBounds[i].height * lineSpacing;
+            labelSizes[i] = MeasureText(_stage, label);
+            menuHeight += labelSizes[i].y;
         }
 
         float weightBefore = 5;
@@ -72,7 +72,7 @@ class MenuScene : public Scene
             label.setFillColor(_selectedEntry == i ? sf::Color::Yellow : sf::Color::White);
             float leftRightPadding = 0.05 * stageBounds.width;
             sf::FloatRect bounds(stageBounds.left + leftRightPadding, currentY,
-                                 stageBounds.width - 2 * leftRightPadding, labelBounds[i].height * lineSpacing);
+                                 stageBounds.width - 2 * leftRightPadding, labelSizes[i].y);
             currentY += bounds.height;
             DrawText(window, _stage, label, bounds, TextAlignment::Left);
         }
@@ -113,7 +113,8 @@ class MenuScene : public Scene
 
     void ToLeaderboard()
     {
-        _game.SetScene(CreateLeaderboardScene(_game));
+        std::vector<PlayerScore> scores = GetHighscores();
+        _game.SetScene(CreateLeaderboardScene(_game, std::move(scores)));
     }
 
     Game &_game;

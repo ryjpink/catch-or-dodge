@@ -6,8 +6,9 @@
 #include "entity.h"
 #include "life_bar.h"
 #include "scenes/game_over_scene.h"
-#include "text.h"
+#include "ui/text.h"
 
+#include <SFML/Audio.hpp>
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Drawable.hpp>
 #include <SFML/Graphics/Font.hpp>
@@ -36,6 +37,14 @@ const int32 positionIterations = 3;
 
 const unsigned seed = std::random_device()();
 
+float GetGameSpeed(float timeElapsedSeconds)
+{
+    float initialDoublingTimeSeconds = 60;
+    float b = 2;
+    float a = (b * b - b) / initialDoublingTimeSeconds;
+    return log2(timeElapsedSeconds * a + b);
+}
+
 class PlayScene : public Scene, b2ContactListener
 {
   public:
@@ -50,18 +59,23 @@ class PlayScene : public Scene, b2ContactListener
 
         _font.loadFromFile("assets/RobotoMono-VariableFont_wght.ttf");
 
+        _gameOverSoundBuffer.loadFromFile("assets/game_over.ogg");
+        _gameOverSound.setBuffer(_gameOverSoundBuffer);
+
         // Register the collision event handler
         _world.SetContactListener(this);
     }
 
     void Update(float timeStep) override
     {
-        _player->AddHealth(-lifeLostPerSecond * timeStep);
+        float gameSpeed = GetGameSpeed(_scoreTimer.getElapsedTime().asSeconds());
+        _player->AddHealth(-lifeLostPerSecond * timeStep * gameSpeed);
         if (_player->IsDead())
         {
             if (!_gameOver)
             {
                 _gameOver = true;
+                _finalScoreInSeconds = _scoreTimer.getElapsedTime().asSeconds();
                 _timeUntilGameOverScreen = 2;
                 for (const std::shared_ptr<Entity> &entity : entities)
                 {
@@ -71,19 +85,20 @@ class PlayScene : public Scene, b2ContactListener
                         entity->Destroy();
                     }
                 }
+                _gameOverSound.play();
             }
 
             _timeUntilGameOverScreen -= timeStep;
             if (_timeUntilGameOverScreen <= 0)
             {
-                _game.SetScene(CreateGameOverScene(_game));
+                _game.SetScene(CreateGameOverScene(_game, _finalScoreInSeconds));
                 return;
             }
         }
         else
         {
-            _timeUntilNextBall -= timeStep;
-            _timeUntilNextBomb -= timeStep;
+            _timeUntilNextBall -= timeStep * gameSpeed;
+            _timeUntilNextBomb -= timeStep * gameSpeed;
             while (_timeUntilNextBall < 0)
             {
                 SpawnBall();
@@ -128,7 +143,7 @@ class PlayScene : public Scene, b2ContactListener
         lifeBarShape.setFillColor(sf::Color::Red);
         window.draw(lifeBarShape);
 
-        float seconds = _scoreTimer.getElapsedTime().asSeconds();
+        float seconds = _player->IsDead() ? _finalScoreInSeconds : _scoreTimer.getElapsedTime().asSeconds();
         int minutes = (int)(seconds / 60);
         seconds -= minutes * 60;
 
@@ -269,6 +284,10 @@ class PlayScene : public Scene, b2ContactListener
 
     bool _gameOver = false;
     float _timeUntilGameOverScreen;
+    int _finalScoreInSeconds = 0;
+
+    sf::SoundBuffer _gameOverSoundBuffer;
+    sf::Sound _gameOverSound;
 };
 
 std::unique_ptr<Scene> CreatePlayScene(Game &game)

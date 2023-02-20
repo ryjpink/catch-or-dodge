@@ -12,7 +12,7 @@ enum TextAlignment
     Right,
 };
 
-sf::FloatRect MeasureText(Stage &stage, sf::Text &text);
+sf::Vector2f MeasureText(Stage &stage, sf::Text &text);
 
 void DrawText(sf::RenderWindow &window, Stage &stage, sf::Text &text, sf::FloatRect bounds,
               TextAlignment alignment = TextAlignment::Left);
