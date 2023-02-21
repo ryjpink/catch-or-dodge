@@ -3,6 +3,7 @@
 #include <cpr/body.h>
 #include <cpr/cpr.h>
 #include <cpr/cprtypes.h>
+#include <cpr/util.h>
 #include <fmt/core.h>
 #include <nlohmann/json.hpp>
 
@@ -28,7 +29,7 @@ std::vector<PlayerScore> SubmitScore(std::string playerName, int scoreInSeconds)
 {
     json body = {{"score", scoreInSeconds}};
     fmt::print("{}", body.dump());
-    cpr::Response response = cpr::Put(cpr::Url{fmt::format("{}/records/{}", baseUrl, playerName)},
+    cpr::Response response = cpr::Put(cpr::Url{fmt::format("{}/records/{}", baseUrl, cpr::util::urlEncode(playerName))},
                                       cpr::Header{{"content-type", "application/json"}}, cpr::Body{body.dump()});
     if (response.status_code != 200)
     {

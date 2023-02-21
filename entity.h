@@ -9,7 +9,6 @@ class Entity
     {
         Player,
         Ball,
-        Bomb
     };
 
     Entity(Type type)

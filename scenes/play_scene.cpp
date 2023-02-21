@@ -1,7 +1,6 @@
 #include "play_scene.h"
 
 #include "entities/ball.h"
-#include "entities/bomb.h"
 #include "entities/player.h"
 #include "entity.h"
 #include "life_bar.h"
@@ -9,6 +8,7 @@
 #include "ui/text.h"
 
 #include <SFML/Audio.hpp>
+#include <SFML/Audio/Music.hpp>
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Drawable.hpp>
 #include <SFML/Graphics/Font.hpp>
@@ -25,11 +25,11 @@
 #include <random>
 
 float ballSpawnInterval = 2.5; // s
-float bombSpawnInterval = 5;
+float bombSpawnInterval = 3;
 float lifeLostPerSecond = 2;
 
 // Gravity on Earth is 9.8067 m/s^2. Point it downwards (Y).
-b2Vec2 gravity(0.0f, 9.8067);
+b2Vec2 gravity(0.0f, 3/*9.8067*/);
 
 // Options controlling the accuracy of the physics simulation
 const int32 velocityIterations = 8;
@@ -50,6 +50,13 @@ class PlayScene : public Scene, b2ContactListener
   public:
     PlayScene(Game &game) : _game(game), _stage(game.GetStage())
     {
+        _backgroundMusic.openFromFile("assets/play_music.ogg");
+        _backgroundMusic.setLoop(true);
+        _backgroundMusic.play();
+
+        _backgroundTexture.loadFromFile("assets/stage_bg.jpeg");
+        _background.setTexture(_backgroundTexture);
+
         // Create the player
         _player = std::make_shared<Player>(_world);
         sf::FloatRect stageBounds = _stage.GetBounds();
@@ -58,9 +65,6 @@ class PlayScene : public Scene, b2ContactListener
         entities.push_back(_player);
 
         _font.loadFromFile("assets/RobotoMono-VariableFont_wght.ttf");
-
-        _gameOverSoundBuffer.loadFromFile("assets/game_over.ogg");
-        _gameOverSound.setBuffer(_gameOverSoundBuffer);
 
         // Register the collision event handler
         _world.SetContactListener(this);
@@ -76,24 +80,26 @@ class PlayScene : public Scene, b2ContactListener
             {
                 _gameOver = true;
                 _finalScoreInSeconds = _scoreTimer.getElapsedTime().asSeconds();
-                _timeUntilGameOverScreen = 2;
+                _timeUntilGameOverScreen = _fadeOutTime;
                 for (const std::shared_ptr<Entity> &entity : entities)
                 {
                     Entity::Type type = entity->GetType();
-                    if (type == Entity::Type::Ball || type == Entity::Type::Bomb)
+                    if (type == Entity::Type::Ball)
                     {
                         entity->Destroy();
                     }
                 }
-                _gameOverSound.play();
             }
 
             _timeUntilGameOverScreen -= timeStep;
             if (_timeUntilGameOverScreen <= 0)
             {
+                _backgroundMusic.stop();
                 _game.SetScene(CreateGameOverScene(_game, _finalScoreInSeconds));
                 return;
             }
+
+            _backgroundMusic.setVolume(100 * _timeUntilGameOverScreen / _fadeOutTime);
         }
         else
         {
@@ -124,12 +130,11 @@ class PlayScene : public Scene, b2ContactListener
 
     void Draw(sf::RenderWindow &window) override
     {
-        sf::RectangleShape background;
         sf::FloatRect stageBounds = _stage.GetBounds();
-        background.setPosition(stageBounds.left, stageBounds.top);
-        background.setSize(_stage.GetSize());
-        background.setFillColor(sf::Color::White);
-        window.draw(background);
+        _background.setPosition(stageBounds.left, stageBounds.top);
+        sf::Vector2u textureSize = _backgroundTexture.getSize();
+        _background.setScale(stageBounds.width / textureSize.x, stageBounds.height / textureSize.y);
+        window.draw(_background);
 
         for (const std::shared_ptr<Entity> &entity : entities)
         {
@@ -151,8 +156,10 @@ class PlayScene : public Scene, b2ContactListener
         sf::Text scoreText;
         scoreText.setFont(_font);
         scoreText.setString(scoreString);
-        scoreText.setFillColor(sf::Color::Black);
-        scoreText.setCharacterSize(32);
+        scoreText.setFillColor(sf::Color::Yellow);
+        scoreText.setOutlineColor(sf::Color::Black);
+        scoreText.setOutlineThickness(2);
+        scoreText.setCharacterSize(40);
         sf::FloatRect textBoundsInStage(stageBounds.left, stageBounds.top + 0.02 * stageBounds.height,
                                         stageBounds.width * 0.99, stageBounds.height);
         DrawText(window, _stage, scoreText, textBoundsInStage, TextAlignment::Right);
@@ -171,6 +178,10 @@ class PlayScene : public Scene, b2ContactListener
         if (event.code == sf::Keyboard::K) // Cheat code: Kill player
         {
             _player->AddHealth(-1000);
+        }
+        if (event.code == sf::Keyboard::D) // Cheat code: Toggle debug visualization
+        {
+            _player->ToggleDebugDrawColliders();
         }
     }
 
@@ -196,16 +207,31 @@ class PlayScene : public Scene, b2ContactListener
 
     void SpawnBall()
     {
-        std::shared_ptr<Ball> ball = std::make_shared<Ball>(_world);
+        std::shared_ptr<Ball> ball = std::make_shared<Ball>(_world, BallType::Good);
         ball->SetPosition(GenerateRandomSpawnPosition());
         entities.push_back(ball);
     }
 
     void SpawnBomb()
     {
-        std::shared_ptr<Bomb> bomb = std::make_shared<Bomb>(_world);
-        bomb->SetPosition(GenerateRandomSpawnPosition());
-        entities.push_back(bomb);
+        std::uniform_real_distribution<float> dist(0, 1);
+        float r = dist(_randomNumberGenerator);
+        BallType type = BallType::Bad;
+        if (r < 0.2)
+        {
+            type = BallType::Boss;
+        }
+        else if (r < 0.3)
+        {
+            type = BallType::SlowDownEffect;
+        }
+        else if (r < 0.4)
+        {
+            type = BallType::SpeedUpEffect;
+        }
+        std::shared_ptr<Ball> ball = std::make_shared<Ball>(_world, type);
+        ball->SetPosition(GenerateRandomSpawnPosition());
+        entities.push_back(ball);
     }
 
     void CleanupDestroyedEntities()
@@ -252,18 +278,28 @@ class PlayScene : public Scene, b2ContactListener
             Ball *ball = (Ball *)entityB;
             if (player->GetActiveHandFixture() == fixtureA)
             {
-                _player->AddHealth(20);
+                BallType ballType = ball->GetBallType();
+                if (ballType == BallType::Good)
+                {
+                    _player->AddHealth(20);
+                }
+                else if (ballType == BallType::Bad)
+                {
+                    _player->AddHealth(-20);
+                }
+                else if (ballType == BallType::Boss)
+                {
+                    _player->AddHealth(-80);
+                }
+                else if (ballType == BallType::SlowDownEffect)
+                {
+                    _player->ApplySlowDownEffect();
+                }
+                else if (ballType == BallType::SpeedUpEffect)
+                {
+                    _player->ApplySpeedUpEffect();
+                }
                 ball->Destroy();
-            }
-        }
-        if (entityA->GetType() == Entity::Type::Player && entityB->GetType() == Entity::Type::Bomb)
-        {
-            Player *player = (Player *)entityA;
-            Bomb *bomb = (Bomb *)entityB;
-            if (player->GetActiveHandFixture() == fixtureA)
-            {
-                _player->AddHealth(-20);
-                bomb->Destroy();
             }
         }
     }
@@ -275,6 +311,11 @@ class PlayScene : public Scene, b2ContactListener
 
     Game &_game;
     Stage &_stage;
+
+    sf::Music _backgroundMusic;
+
+    sf::Texture _backgroundTexture;
+    sf::Sprite _background;
 
     std::mt19937 _randomNumberGenerator = std::mt19937(seed);
 
@@ -294,11 +335,9 @@ class PlayScene : public Scene, b2ContactListener
     sf::Clock _scoreTimer;
 
     bool _gameOver = false;
+    float _fadeOutTime = 2;
     float _timeUntilGameOverScreen;
     int _finalScoreInSeconds = 0;
-
-    sf::SoundBuffer _gameOverSoundBuffer;
-    sf::Sound _gameOverSound;
 };
 
 std::unique_ptr<Scene> CreatePlayScene(Game &game)

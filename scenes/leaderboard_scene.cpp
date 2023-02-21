@@ -4,11 +4,13 @@
 #include "ui/table.h"
 #include "ui/text.h"
 
+#include <SFML/Audio/Music.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Graphics/Texture.hpp>
+
 #include <fmt/core.h>
 
 class LeaderboardScene : public Scene
@@ -17,6 +19,10 @@ class LeaderboardScene : public Scene
     LeaderboardScene(Game &game, std::vector<PlayerScore> scores)
         : _game(game), _stage(game.GetStage()), _table({"Rank", "Name", "Score"}), _scores(std::move(scores))
     {
+        _backgroundMusic.openFromFile("assets/leaderboard_music.ogg");
+        _backgroundMusic.setLoop(true);
+        _backgroundMusic.play();
+
         _backgroundTexture.loadFromFile("assets/leaderboard_bg.jpeg");
         _background.setTexture(_backgroundTexture);
         _font.loadFromFile("assets/RobotoMono-VariableFont_wght.ttf");
@@ -69,11 +75,13 @@ class LeaderboardScene : public Scene
   private:
     void BackToMainMenu()
     {
+        _backgroundMusic.stop();
         _game.SetScene(CreateMenuScene(_game));
     }
 
     Game &_game;
     Stage &_stage;
+    sf::Music _backgroundMusic;
     sf::Texture _backgroundTexture;
     sf::Sprite _background;
     std::vector<PlayerScore> _scores;

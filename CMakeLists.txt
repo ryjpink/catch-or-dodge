@@ -5,7 +5,6 @@ project(catcher)
 add_executable(catcher
     main.cpp
     entities/ball.cpp
-    entities/bomb.cpp
     entities/player.cpp
     leaderboard.cpp
     ui/table.cpp

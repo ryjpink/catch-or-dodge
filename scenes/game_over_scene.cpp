@@ -3,6 +3,7 @@
 #include "scenes/leaderboard_scene.h"
 #include "ui/text.h"
 
+#include <SFML/Audio/Music.hpp>
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/Graphics/Text.hpp>
@@ -17,6 +18,10 @@ class GameOverScene : public Scene
   public:
     GameOverScene(Game &game, int scoreInSeconds) : _game(game), _stage(game.GetStage()), _scoreInSeconds(scoreInSeconds)
     {
+        _backgroundMusic.openFromFile("assets/game_over_music.ogg");
+        _backgroundMusic.setLoop(true);
+        _backgroundMusic.play();
+
         _backgroundTexture.loadFromFile("assets/game_over_bg.jpeg");
         _background.setTexture(_backgroundTexture);
         _font.loadFromFile("assets/RobotoMono-VariableFont_wght.ttf");
@@ -96,11 +101,13 @@ class GameOverScene : public Scene
     void ToLeaderboard()
     {
         std::vector<PlayerScore> scores = SubmitScore(_playerNameInput, _scoreInSeconds);
+        _backgroundMusic.stop();
         _game.SetScene(CreateLeaderboardScene(_game, std::move(scores)));
     }
 
     Game &_game;
     Stage &_stage;
+    sf::Music _backgroundMusic;
     int _scoreInSeconds;
     sf::Texture _backgroundTexture;
     sf::Sprite _background;

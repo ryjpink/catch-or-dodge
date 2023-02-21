@@ -1,5 +1,6 @@
 #include "entities/player.h"
 
+#include <SFML/Graphics/CircleShape.hpp>
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/System/Vector2.hpp>
@@ -16,8 +17,6 @@ float width = 1.36736;         // m
 float weight = 90;             // kg
 float volume = height * width; // m^2
 
-bool debugDrawHandSensor = false;
-
 Player::Player(b2World &world) : Entity(Type::Player)
 {
     b2BodyDef bodyDef;
@@ -28,17 +27,21 @@ Player::Player(b2World &world) : Entity(Type::Player)
 
     b2FixtureDef fixtureDef;
     fixtureDef.density = weight / volume; // kg/m^2
-    _bodyShape.SetAsBox(0.1 * width, 0.45 * height, b2Vec2(0, 0.1 * height), 0);
+    _headShape.m_radius = 0.15 * width;
+    _headShape.m_p = b2Vec2(0, -0.25 * height);
+    fixtureDef.shape = &_headShape;
+    _body->CreateFixture(&fixtureDef);
+    _bodyShape.SetAsBox(0.15 * width, 0.4 * height, b2Vec2(0, 0.15 * height), 0);
     fixtureDef.shape = &_bodyShape;
     _body->CreateFixture(&fixtureDef);
 
     fixtureDef.isSensor = true;
 
-    _rightFacingHandShape.SetAsBox(0.08 * width, 0.05 * height, b2Vec2(0.23 * width, -0.3 * height), 0);
+    _rightFacingHandShape.SetAsBox(0.08 * width, 0.05 * height, b2Vec2(0.33 * width, -0.3 * height), 0);
     fixtureDef.shape = &_rightFacingHandShape;
     _rightFacingHandFixture = _body->CreateFixture(&fixtureDef);
 
-    _leftFacingHandShape.SetAsBox(0.08 * width, 0.05 * height, b2Vec2(-0.23 * width, -0.3 * height), 0);
+    _leftFacingHandShape.SetAsBox(0.08 * width, 0.05 * height, b2Vec2(-0.33 * width, -0.3 * height), 0);
     fixtureDef.shape = &_leftFacingHandShape;
     _leftFacingHandFixture = _body->CreateFixture(&fixtureDef);
 
@@ -47,7 +50,7 @@ Player::Player(b2World &world) : Entity(Type::Player)
     _texture.loadFromFile("assets/player.png");
     sf::Vector2u textureSize = _texture.getSize();
     _sprite.setTexture(_texture);
-    _sprite.setOrigin(sf::Vector2f(0.5 * textureSize.x, 0.5 * textureSize.y));
+    _sprite.setOrigin(sf::Vector2f(0.4 * textureSize.x, 0.5 * textureSize.y));
     _baseScale = sf::Vector2f(width / textureSize.x, height / textureSize.y);
     _sprite.setScale(_baseScale);
 }
@@ -111,8 +114,9 @@ void Player::Draw(sf::RenderWindow &window)
         _sprite.setScale(_baseScale * shrinkScale);
     }
 
-    if (debugDrawHandSensor)
+    if (_debugDrawColliders)
     {
+        // Active hand sensor
         {
             sf::RectangleShape handSensor;
             handSensor.setFillColor(sf::Color(0xff00ff7f));
@@ -123,6 +127,19 @@ void Player::Draw(sf::RenderWindow &window)
             handSensor.setSize(sf::Vector2f(collisionAabbSize.x, collisionAabbSize.y));
             window.draw(handSensor);
         }
+
+        // Head collider
+        {
+            sf::CircleShape head;
+            head.setFillColor(sf::Color(0x7f7f7f7f));
+            head.setRadius(_headShape.m_radius);
+            head.setOrigin(_headShape.m_radius, _headShape.m_radius);
+            b2Vec2 headPos = _body->GetWorldPoint(_headShape.m_p);
+            head.setPosition(headPos.x, headPos.y);
+            window.draw(head);
+        }
+
+        // Body collider
         {
             sf::RectangleShape body;
             body.setFillColor(sf::Color(0x7f7f7f7f));
@@ -138,16 +155,28 @@ void Player::Draw(sf::RenderWindow &window)
 
 void Player::Update(float timeStep)
 {
+    if (_timeUntilSpeedAlteringEffectFades > 0)
+    {
+        _timeUntilSpeedAlteringEffectFades -= timeStep;
+    }
+    else
+    {
+        _speed = _defaultSpeed;
+    }
     float vx = GetHorizontalVelocity();
     sf::Vector2u textureSize = _texture.getSize();
     if (vx > 0)
     {
         _sprite.setTextureRect(sf::IntRect(0, 0, textureSize.x, textureSize.y));
+        sf::Vector2u textureSize = _texture.getSize();
+        _sprite.setOrigin(sf::Vector2f(0.4 * textureSize.x, 0.5 * textureSize.y));
         _activeFixture = _rightFacingHandFixture;
     }
     else if (vx < 0)
     {
         _sprite.setTextureRect(sf::IntRect(textureSize.x, 0, -textureSize.x, textureSize.y));
+        sf::Vector2u textureSize = _texture.getSize();
+        _sprite.setOrigin(sf::Vector2f(0.6 * textureSize.x, 0.5 * textureSize.y));
         _activeFixture = _leftFacingHandFixture;
     }
     b2Vec2 v(vx, 0);
@@ -164,4 +193,21 @@ void Player::Update(float timeStep)
 b2Fixture *Player::GetActiveHandFixture()
 {
     return _activeFixture;
+}
+
+void Player::ToggleDebugDrawColliders()
+{
+    _debugDrawColliders = !_debugDrawColliders;
+}
+
+void Player::ApplySlowDownEffect()
+{
+    _speed = _defaultSpeed * 0.5;
+    _timeUntilSpeedAlteringEffectFades = 4;
+}
+
+void Player::ApplySpeedUpEffect()
+{
+    _speed = _defaultSpeed * 1.5;
+    _timeUntilSpeedAlteringEffectFades = 8;
 }

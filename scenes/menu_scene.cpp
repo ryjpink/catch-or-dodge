@@ -5,6 +5,9 @@
 #include "scenes/play_scene.h"
 #include "ui/text.h"
 
+#include <SFML/Audio/Music.hpp>
+#include <SFML/Audio/Sound.hpp>
+#include <SFML/Audio/SoundBuffer.hpp>
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
@@ -26,6 +29,13 @@ class MenuScene : public Scene
   public:
     MenuScene(Game &game) : _game(game), _stage(game.GetStage())
     {
+        _backgroundMusic.openFromFile("assets/menu_music.ogg");
+        _backgroundMusic.setLoop(true);
+        _backgroundMusic.play();
+
+        _clackSoundBuffer.loadFromFile("assets/clack.ogg");
+        _clackSound.setBuffer(_clackSoundBuffer);
+
         _backgroundTexture.loadFromFile("assets/menu_bg.jpeg");
         _background.setTexture(_backgroundTexture);
         _font.loadFromFile("assets/RobotoMono-VariableFont_wght.ttf");
@@ -82,6 +92,7 @@ class MenuScene : public Scene
     {
         if (event.code == sf::Keyboard::Enter)
         {
+            _backgroundMusic.stop();
             if (_selectedEntry == MenuEntry::NewGame)
             {
                 StartNewGame();
@@ -98,10 +109,12 @@ class MenuScene : public Scene
         else if (event.code == sf::Keyboard::Up)
         {
             _selectedEntry = (_selectedEntry + MenuEntry::Count - 1) % MenuEntry::Count;
+            _clackSound.play();
         }
         else if (event.code == sf::Keyboard::Down)
         {
             _selectedEntry = (_selectedEntry + 1) % MenuEntry::Count;
+            _clackSound.play();
         }
     }
 
@@ -119,6 +132,9 @@ class MenuScene : public Scene
 
     Game &_game;
     Stage &_stage;
+    sf::Music _backgroundMusic;
+    sf::SoundBuffer _clackSoundBuffer;
+    sf::Sound _clackSound;
     sf::Texture _backgroundTexture;
     sf::Sprite _background;
     sf::Font _font;
